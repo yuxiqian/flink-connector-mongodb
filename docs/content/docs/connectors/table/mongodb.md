@@ -74,7 +74,7 @@ INSERT INTO MyUserTable
 SELECT _id, name, age, status FROM T;
 
 -- scan data from the MongoDB table
-SELECT id, name, age, status FROM MyUserTable;
+SELECT _id, name, age, status FROM MyUserTable;
 
 -- temporal join the MongoDB table as a dimension table
 SELECT * FROM myTopic
@@ -154,7 +154,7 @@ Connector Options
       <td>no</td>
       <td style="word-wrap: break-word;">default</td>
       <td>String</td>
-      <td>Specifies the partition strategy. Available strategies are `single`, `sample`, `split-vector`, `sharded` and `default`. 
+      <td>Specifies the partition strategy. Available strategies are `single`, `sample`, `split-vector`, `sharded`, `pagination` and `default`. 
           See the following <a href="#partitioned-scan">Partitioned Scan</a> section for more details.</td>
     </tr>
     <tr>
@@ -175,6 +175,15 @@ Connector Options
           The sample partitioner samples the collection, projects and sorts by the partition fields.
           Then uses every `scan.partition.samples` as the value to use to calculate the partition boundaries.
           The total number of samples taken is calculated as: `samples per partition * (count of documents / number of documents per partition)`.</td>
+    </tr>
+    <tr>
+      <td><h5>scan.partition.record-size</h5></td>
+      <td>optional</td>
+      <td>no</td>
+      <td style="word-wrap: break-word;">(none)</td>
+      <td>Integer</td>
+      <td>Specifies the number of records in each chunk. Only takes effect when the partition strategy is `pagination`.
+          This option will be automatically inferred from `scan.partition.size` if absent.</td>
     </tr>
     <tr>
       <td><h5>lookup.cache</h5></td>
@@ -199,7 +208,7 @@ Connector Options
       <td>no</td>
       <td style="word-wrap: break-word;">(none)</td>
       <td>Duration</td>
-      <td>The max time to live for each rows in lookup cache after writing into the cache. 
+      <td>The max time to live for each row in lookup cache after writing into the cache. 
       "lookup.cache" must be set to "PARTIAL" to use this option. See the following <a href="#lookup-cache">Lookup Cache</a> section for more details. </td>
     </tr>
     <tr>
@@ -208,7 +217,7 @@ Connector Options
       <td>no</td>
       <td style="word-wrap: break-word;">(none)</td>
       <td>Duration</td>
-      <td>The max time to live for each rows in lookup cache after accessing the entry in the cache.
+      <td>The max time to live for each row in lookup cache after accessing the entry in the cache.
       "lookup.cache" must be set to "PARTIAL" to use this option. See the following <a href="#lookup-cache">Lookup Cache</a> section for more details. </td>
     </tr>
     <tr>
@@ -241,7 +250,7 @@ Connector Options
       <td>optional</td>
       <td>no</td>
       <td style="word-wrap: break-word;">always</td>
-      <td>Enum Possible values: always, never</td>
+      <td><p>Enum</p>Possible values: always, never</td>
       <td>Fine-grained configuration to control filter push down. 
           Supported policies are:
           <ul>
@@ -294,7 +303,7 @@ Connector Options
       <td><h5>sink.delivery-guarantee</h5></td>
       <td>optional</td>
       <td>no</td>
-      <td style="word-wrap: break-word;">at-lease-once</td>
+      <td style="word-wrap: break-word;">at-least-once</td>
       <td><p>Enum</p>Possible values: none, at-least-once</td>
       <td>Optional delivery guarantee when committing. The exactly-once guarantee is not supported yet.</td>
     </tr>
@@ -345,7 +354,7 @@ fields in the order defined in the DDL.
   value as _id of the corresponding document.
 - When there's multiple fields in the specified primary key, we convert and composite these fields 
   into a bson document as the _id of the corresponding document.
-  For example, if have a primary key statement `PRIMARY KEY (f1, f2) NOT ENFORCED`,
+  For example, if you have a primary key statement `PRIMARY KEY (f1, f2) NOT ENFORCED`,
   the extracted _id will be the form like `_id: {f1: v1, f2: v2}`.
 
 Notice that it will be ambiguous if the _id field exists in DDL, but the primary key is not declared as _id.
@@ -366,6 +375,8 @@ feature for MongoDB collection. The following partition strategies are provided:
   range of the chunks are stored within the collection) as the partitions directly. The
   sharded strategy only used for sharded collection which is fast and even. Read permission
   of config database is required.
+- `pagination`: splits records evenly by count. Each chunk will have exactly the same number
+  of records. This can be configured by `scan.partition.record-size` option.
 - `default`: uses sharded strategy for sharded collections otherwise using split vector
   strategy.
 
@@ -393,8 +404,8 @@ by setting `lookup.partial-cache.cache-missing-key` to false.
 
 ### Idempotent Writes
 
-MongoDB connector use upsert writing mode `db.connection.update(<query>, <update>, { upsert: true })` 
-rather than insert writing mode `db.connection.insert()` if primary key is defined in DDL.
+MongoDB connector use upsert writing mode `db.collection.update(<query>, <update>, { upsert: true })` 
+rather than insert writing mode `db.collection.insert()` if primary key is defined in DDL.
 We composite the primary key fields as the document _id which is the reserved primary key of
 MongoDB. Use upsert mode to write rows into MongoDB, which provides idempotence.
 
@@ -456,7 +467,7 @@ INSERT INTO MySinkTable SELECT _id, shardKey0, shardKey1, status FROM T;
 INSERT INTO MySinkTable PARTITION(shardKey0 = 'value0', shardKey1 = 'value1') SELECT 1, 'INIT';
 
 -- Insert with static(shardKey0) and dynamic(shardKey1) partition
-INSERT INTO MySinkTable PARTITION(shardKey0 = 'value0') SELECT 1, 'value1' 'INIT';
+INSERT INTO MySinkTable PARTITION(shardKey0 = 'value0') SELECT 1, 'value1', 'INIT';
 ```
 {{< hint warning >}}
 LIMITATION: Although the shard key value is no longer immutable in MongoDB 4.2 and later,

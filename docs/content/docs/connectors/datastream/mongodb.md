@@ -106,7 +106,7 @@ Flink's MongoDB source is created by using the static builder `MongoSource.<Outp
 6. _setPartitionStrategy(PartitionStrategy partitionStrategy)_
     * Optional. Default: `PartitionStrategy.DEFAULT`.
     * Sets the partition strategy. Available partition strategies are `SINGLE`, `SAMPLE`, `SPLIT_VECTOR`,
-      `SHARDED` and `DEFAULT`. You can see <a href="#partition-strategies">Partition Strategies section</a> for detail.
+      `SHARDED`, `PAGINATION` and `DEFAULT`. You can see <a href="#partition-strategies">Partition Strategies section</a> for detail.
 7. _setPartitionSize(MemorySize partitionSize)_
     * Optional. Default: `64mb`.
     * Sets the partition memory size of MongoDB split. Split a MongoDB collection into multiple
@@ -144,6 +144,8 @@ The following partition strategies are provided:
   range of the chunks are stored within the collection) as the partitions directly. The
   sharded strategy only used for sharded collection which is fast and even. Read permission
   of config database is required.
+- `PAGINATION`: splits records evenly by count. Each chunk will have exactly the same number
+  of records. This can be configured by `setPartitionRecordSize()`.
 - `DEFAULT`: uses sharded strategy for sharded collections otherwise using split vector
   strategy.
 
@@ -207,10 +209,10 @@ Flink's MongoDB sink is created by using the static builder `MongoSink.<InputTyp
 8. _setOrderedWrites(boolean ordered)_
     * Optional. Default: `true`
     * Defines MongoDB driver option to perform ordered writes.
-8. _setBypassDocumentValidation(boolean bypassDocumentValidation)_
+9. _setBypassDocumentValidation(boolean bypassDocumentValidation)_
     * Optional. Default: `false`
     * Defines MongoDB driver option to bypass document validation. 
-9. __setSerializationSchema(MongoSerializationSchema<InputType> serializationSchema)__
+10. __setSerializationSchema(MongoSerializationSchema<InputType> serializationSchema)__
     * Required.
     * A `MongoSerializationSchema` is required for parsing input record to MongoDB 
       [WriteModel](https://www.mongodb.com/docs/drivers/java/sync/current/usage-examples/bulkWrite/).

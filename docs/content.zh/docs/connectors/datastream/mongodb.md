@@ -101,7 +101,7 @@ Flink 的 MongoDB Source 可以通过 `MongoSource.<OutputType>builder()` 构造
       或者 `maxTimeMS()` 大于 30分钟。
 6. _setPartitionStrategy(PartitionStrategy partitionStrategy) _
     * 可选。 默认值： `PartitionStrategy.DEFAULT`。
-    * 设置分区策略。 可选的分区策略有 `SINGLE`，`SAMPLE`，`SPLIT_VECTOR`，`SHARDED` 和 `DEFAULT`。
+    * 设置分区策略。 可选的分区策略有 `SINGLE`，`SAMPLE`，`SPLIT_VECTOR`，`SHARDED`，`PAGINATION` 和 `DEFAULT`。
       查看 <a href="#分区策略">分区策略</a> 章节获取详细介绍。
 7. _setPartitionSize(MemorySize partitionSize)_
     * 可选。默认值：`64mb`。
@@ -130,6 +130,7 @@ Flink 的 MongoDB Source 可以通过 `MongoSource.<OutputType>builder()` 构造
   仅适用于未分片集合，需要 splitVector 权限。
 - `SHARDED`：从 `config.chunks` 集合中直接读取分片集合的分片边界作为分区，不需要额外计算，快速且均匀。
   仅适用于已经分片的集合，需要 config 数据库的读取权限。
+- `PAGINATION`：按记录数均匀分割。每个分区将拥有完全相同的记录数量。可以通过 `setPartitionRecordSize()` 配置。
 - `DEFAULT`：对分片集合使用 `SHARDED` 策略，对未分片集合使用 `SPLIT_VECTOR` 策略。
 
 ## MongoDB Sink
@@ -165,7 +166,7 @@ stream.sinkTo(sink);
 {{< /tabs >}}
 
 ### 配置项
-Flink 的 MongoDB Source 可以通过 `MongoSink.<InputType>builder()` 构造器构建。
+Flink 的 MongoDB Sink 可以通过 `MongoSink.<InputType>builder()` 构造器构建。
 
 1. __setUri(String uri)__
     * 必须。
@@ -188,7 +189,13 @@ Flink 的 MongoDB Source 可以通过 `MongoSink.<InputType>builder()` 构造器
 7. _setDeliveryGuarantee(DeliveryGuarantee deliveryGuarantee)_
     * 可选。默认值：`DeliveryGuarantee.AT_LEAST_ONCE`.
     * 设置投递保证。 仅一次（EXACTLY_ONCE）的投递保证暂不支持。
-8. __setSerializationSchema(MongoSerializationSchema<InputType> serializationSchema)__
+8. _setOrderedWrites(boolean ordered)_
+    * 可选。默认值：`true`。
+    * 设置 MongoDB 驱动程序选项以执行有序写入。
+9. _setBypassDocumentValidation(boolean bypassDocumentValidation)_
+    * 可选。默认值：`false`。
+    * 设置 MongoDB 驱动程序选项以绕过文档验证。
+10. __setSerializationSchema(MongoSerializationSchema<InputType> serializationSchema)__
     * 必须。
     * 设置 `MongoSerializationSchema` 将输入类型转换为 MongoDB
       [WriteModel](https://www.mongodb.com/docs/drivers/java/sync/current/usage-examples/bulkWrite/)。
